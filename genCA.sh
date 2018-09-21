@@ -1,6 +1,33 @@
 #!/usr/bin/env bash
 #(@)generate-CA.sh - Create CA key-pair and server key-pair signed by CA
 
+# Copyright (c) 2013-2016 Jan-Piet Mens <jpmens()gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of mosquitto nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 #
 # Usage:
 #	./generate-CA.sh		creates ca.crt and server.{key,crt}
@@ -18,17 +45,23 @@ set -e
 
 export LANG=C
 
-kind=server
+#kind=server
 
-if [ $# -ne 2 ]; then
-	kind=server
-	host=$(hostname -f)
-	if [ -n "$1" ]; then
-		host="$1"
-	fi
-else
-	kind=client
-	CLIENT="$2"
+#if [ $# -ne 2 ]; then
+#	kind=server
+#	host=$(hostname -f)
+#	if [ -n "$1" ]; then
+#		host="$1"
+#	fi
+#else
+#	kind=client
+#	CLIENT="$2"
+#fi
+host="server"
+CLIENT="client"
+
+if [ $# -ne 0 ]; then
+	exit 0
 fi
 
 [ -z "$USER" ] && USER=root
@@ -101,12 +134,12 @@ fi
 
 if [ ! -f $CACERT.crt ]; then
 
-	#    ____    _    
-	#   / ___|  / \   
-	#  | |     / _ \  
-	#  | |___ / ___ \ 
+	#    ____    _
+	#   / ___|  / \
+	#  | |     / _ \
+	#  | |___ / ___ \
 	#   \____/_/   \_\
-	#                 
+	#
 
 	# Create un-encrypted (!) key
 	$openssl req -newkey rsa:${keybits} -x509 -nodes $defaultmd -days $days -extensions v3_ca -keyout $CACERT.key -out $CACERT.crt -subj "${CA_DN}"
@@ -120,111 +153,111 @@ if [ ! -f $CACERT.crt ]; then
 fi
 
 
-if [ $kind == 'server' ]; then
+#if [ $kind == 'server' ]; then
 
-	#   ____                           
-	#  / ___|  ___ _ ____   _____ _ __ 
-	#  \___ \ / _ \ '__\ \ / / _ \ '__|
-	#   ___) |  __/ |   \ V /  __/ |   
-	#  |____/ \___|_|    \_/ \___|_|   
-	#                                  
+#   ____
+#  / ___|  ___ _ ____   _____ _ __
+#  \___ \ / _ \ '__\ \ / / _ \ '__|
+#   ___) |  __/ |   \ V /  __/ |
+#  |____/ \___|_|    \_/ \___|_|
+#
 
-	if [ ! -f $SERVER.key ]; then
-		echo "--- Creating server key and signing request"
-		$openssl genrsa -out $SERVER.key $keybits
-		$openssl req -new $defaultmd \
-			-out $SERVER.csr \
-			-key $SERVER.key \
-			-subj "${SERVER_DN}"
-		chmod 400 $SERVER.key
-		chown $MOSQUITTOUSER $SERVER.key
-	fi
+if [ ! -f $SERVER.key ]; then
+	echo "--- Creating server key and signing request"
+	$openssl genrsa -out $SERVER.key $keybits
+	$openssl req -new $defaultmd \
+		-out $SERVER.csr \
+		-key $SERVER.key \
+		-subj "${SERVER_DN}"
+	chmod 400 $SERVER.key
+	chown $MOSQUITTOUSER $SERVER.key
+fi
 
-	if [ -f $SERVER.csr -a ! -f $SERVER.crt ]; then
+if [ -f $SERVER.csr -a ! -f $SERVER.crt ]; then
 
-		# There's no way to pass subjAltName on the CLI so
-		# create a cnf file and use that.
+	# There's no way to pass subjAltName on the CLI so
+	# create a cnf file and use that.
 
-		CNF=`mktemp /tmp/cacnf.XXXXXXXX` || { echo "$0: can't create temp file" >&2; exit 1; }
-		sed -e 's/^.*%%% //' > $CNF <<\!ENDconfig
-		%%% [ JPMextensions ]
-		%%% basicConstraints        = critical,CA:false
-		%%% nsCertType              = server
-		%%% keyUsage                = nonRepudiation, digitalSignature, keyEncipherment
-		%%% nsComment               = "Broker Certificate"
-		%%% subjectKeyIdentifier    = hash
-		%%% authorityKeyIdentifier  = keyid,issuer:always
-		%%% subjectAltName          = $ENV::SUBJALTNAME
-		%%% # issuerAltName           = issuer:copy
-		%%% ## nsCaRevocationUrl       = http://mqttitude.org/carev/
-		%%% ## nsRevocationUrl         = http://mqttitude.org/carev/
-		%%% certificatePolicies     = ia5org,@polsection
-		%%% 
-		%%% [polsection]
-		%%% policyIdentifier	    = 1.3.5.8
-		%%% CPS.1		    = "http://localhost"
-		%%% userNotice.1	    = @notice
-		%%% 
-		%%% [notice]
-		%%% explicitText            = "This CA is for a local MQTT broker installation only"
-		%%% organization            = "OwnTracks"
-		%%% noticeNumbers           = 1
+	CNF=`mktemp /tmp/cacnf.XXXXXXXX` || { echo "$0: can't create temp file" >&2; exit 1; }
+	sed -e 's/^.*%%% //' > $CNF <<\!ENDconfig
+	%%% [ JPMextensions ]
+	%%% basicConstraints        = critical,CA:false
+	%%% nsCertType              = server
+	%%% keyUsage                = nonRepudiation, digitalSignature, keyEncipherment
+	%%% nsComment               = "Broker Certificate"
+	%%% subjectKeyIdentifier    = hash
+	%%% authorityKeyIdentifier  = keyid,issuer:always
+	%%% subjectAltName          = $ENV::SUBJALTNAME
+	%%% # issuerAltName           = issuer:copy
+	%%% ## nsCaRevocationUrl       = http://mqttitude.org/carev/
+	%%% ## nsRevocationUrl         = http://mqttitude.org/carev/
+	%%% certificatePolicies     = ia5org,@polsection
+	%%%
+	%%% [polsection]
+	%%% policyIdentifier	    = 1.3.5.8
+	%%% CPS.1		    = "http://localhost"
+	%%% userNotice.1	    = @notice
+	%%%
+	%%% [notice]
+	%%% explicitText            = "This CA is for a local MQTT broker installation only"
+	%%% organization            = "OwnTracks"
+	%%% noticeNumbers           = 1
 
 !ENDconfig
 
-		SUBJALTNAME="$(addresslist)"
-		export SUBJALTNAME		# Use environment. Because I can. ;-)
+	SUBJALTNAME="$(addresslist)"
+	export SUBJALTNAME		# Use environment. Because I can. ;-)
 
-		echo "--- Creating and signing server certificate"
-		$openssl x509 -req $defaultmd \
-			-in $SERVER.csr \
-			-CA $CACERT.crt \
-			-CAkey $CACERT.key \
-			-CAcreateserial \
-			-CAserial "${DIR}/ca.srl" \
-			-out $SERVER.crt \
-			-days $days \
-			-extfile ${CNF} \
-			-extensions JPMextensions
+	echo "--- Creating and signing server certificate"
+	$openssl x509 -req $defaultmd \
+		-in $SERVER.csr \
+		-CA $CACERT.crt \
+		-CAkey $CACERT.key \
+		-CAcreateserial \
+		-CAserial "${DIR}/ca.srl" \
+		-out $SERVER.crt \
+		-days $days \
+		-extfile ${CNF} \
+		-extensions JPMextensions
 
-		rm -f $CNF
-		chmod 444 $SERVER.crt
-		chown $MOSQUITTOUSER $SERVER.crt
-	fi
-else
-	#    ____ _ _            _   
-	#   / ___| (_) ___ _ __ | |_ 
-	#  | |   | | |/ _ \ '_ \| __|
-	#  | |___| | |  __/ | | | |_ 
-	#   \____|_|_|\___|_| |_|\__|
-	#                            
+	rm -f $CNF
+	chmod 444 $SERVER.crt
+	chown $MOSQUITTOUSER $SERVER.crt
+fi
 
-	if [ ! -f $CLIENT.key ]; then
-		echo "--- Creating client key and signing request"
-		$openssl genrsa -out $CLIENT.key $keybits
+#    ____ _ _            _
+#   / ___| (_) ___ _ __ | |_
+#  | |   | | |/ _ \ '_ \| __|
+#  | |___| | |  __/ | | | |_
+#   \____|_|_|\___|_| |_|\__|
+#
 
-		CNF=`mktemp /tmp/cacnf-req.XXXXXXXX` || { echo "$0: can't create temp file" >&2; exit 1; }
-		# Mosquitto's use_identity_as_username takes the CN attribute
-		# so we're populating that with the client's name
-		sed -e 's/^.*%%% //' > $CNF <<!ENDClientconfigREQ
-		%%% [ req ]
-		%%% distinguished_name	= req_distinguished_name
-		%%% prompt			= no
-		%%% output_password		= secret
-		%%% 
-		%%% [ req_distinguished_name ]
-		%%% # O                       = OwnTracks
-		%%% # OU                      = MQTT
-		%%% # CN                      = Suzie Smith
-		%%% CN                        = $CLIENT
-		%%% # emailAddress            = $CLIENT
+if [ ! -f $CLIENT.key ]; then
+	echo "--- Creating client key and signing request"
+	$openssl genrsa -out $CLIENT.key $keybits
+
+	CNF=`mktemp /tmp/cacnf-req.XXXXXXXX` || { echo "$0: can't create temp file" >&2; exit 1; }
+	# Mosquitto's use_identity_as_username takes the CN attribute
+	# so we're populating that with the client's name
+	sed -e 's/^.*%%% //' > $CNF <<!ENDClientconfigREQ
+	%%% [ req ]
+	%%% distinguished_name	= req_distinguished_name
+	%%% prompt			= no
+	%%% output_password		= secret
+	%%%
+	%%% [ req_distinguished_name ]
+	%%% # O                       = OwnTracks
+	%%% # OU                      = MQTT
+	%%% # CN                      = Suzie Smith
+	%%% CN                        = $CLIENT
+	%%% # emailAddress            = $CLIENT
 !ENDClientconfigREQ
 
-		$openssl req -new $defaultmd \
-			-out $CLIENT.csr \
-			-key $CLIENT.key \
-			-config $CNF
-		chmod 400 $CLIENT.key
+	$openssl req -new $defaultmd \
+		-out $CLIENT.csr \
+		-key $CLIENT.key \
+		-config $CNF
+	chmod 400 $CLIENT.key
 	fi
 
 	if [ -f $CLIENT.csr -a ! -f $CLIENT.crt ]; then
@@ -261,4 +294,3 @@ else
 		rm -f $CNF
 		chmod 444 $CLIENT.crt
 	fi
-fi
