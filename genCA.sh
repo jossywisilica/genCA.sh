@@ -188,12 +188,12 @@ if [ -f $SERVER.csr -a ! -f $SERVER.crt ]; then
 	%%% ## nsCaRevocationUrl       = http://mqttitude.org/carev/
 	%%% ## nsRevocationUrl         = http://mqttitude.org/carev/
 	%%% certificatePolicies     = ia5org,@polsection
-	%%%
+	%%% 
 	%%% [polsection]
 	%%% policyIdentifier	    = 1.3.5.8
 	%%% CPS.1		    = "http://localhost"
 	%%% userNotice.1	    = @notice
-	%%%
+	%%% 
 	%%% [notice]
 	%%% explicitText            = "This CA is for a local MQTT broker installation only"
 	%%% organization            = "OwnTracks"
@@ -240,7 +240,7 @@ if [ ! -f $CLIENT.key ]; then
 	%%% distinguished_name	= req_distinguished_name
 	%%% prompt			= no
 	%%% output_password		= secret
-	%%%
+	%%% 
 	%%% [ req_distinguished_name ]
 	%%% # O                       = OwnTracks
 	%%% # OU                      = MQTT
