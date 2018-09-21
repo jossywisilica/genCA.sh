@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 #(@)generate-CA.sh - Create CA key-pair and server key-pair signed by CA
 
-# Copyright (c) 2013-2016 Jan-Piet Mens <jpmens()gmail.com>
-# All rights reserved.
-#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
@@ -30,9 +27,8 @@
 
 #
 # Usage:
-#	./generate-CA.sh		creates ca.crt and server.{key,crt}
-#	./generate-CA.sh hostname	creates hostname.{key,crt}
-#	./generate-CA.sh client email	creates email.{key,crt}
+#	./generate-CA.sh		creates ca.crt and server.{key,crt} and client.{key,crt}
+
 #
 # Set the following optional environment variables before invocation
 # to add the specified IP addresses and/or hostnames to the subjAltName list
